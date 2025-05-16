@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
 # Needed libraries
-from __future__ import division
+
 from urllib.request import urlopen
-from numpy import sqrt, genfromtxt
+from numpy import sqrt
 import numpy as np
 from io import BytesIO
 import os.path
 from os import makedirs
 from numpy.lib.scimath import sqrt as csqrt
-import matplotlib.pyplot as plt
+from io import StringIO  
+import pandas as pd 
+from urllib.request import Request, urlopen
 
 # Needed constants
 # Unit mass of the gas species [kg]
@@ -43,6 +45,8 @@ class Gas:
         else:
             self.iso_type = 'IsoBar'
 
+    # --------- IMPORT NIST DATA BETWEEN t_low and t_high ---------
+
     def get_file_name(self):
         if self.iso_type == 'IsoBar':
             file_name = self.short_name + '_IsoBar_' + str(self.temp) + '_K_' + str(self.t_low) + '-' + str(
@@ -63,22 +67,27 @@ class Gas:
     def get_short_name(self):
         """The short name of the chosen gas species."""
         return self.short_name
-
-    def get_kappa(self):
+    
+    def get_kappa(self): #constant 
         """The adiabatic index [c_p/c_V] of the chosen gas species."""
         return self.kappa
 
-    def get_mass(self):
+    def get_mass(self):#constant 
         """The mass number of the gas particles (atoms / molecules)."""
         return self.mass
 
-    def get_liquid_enthalpy_tp(self):
+    def get_liquid_enthalpy_tp(self): #constant 
         """The liquid enthalpy [kJ/kg] of the chosen gas species at its triple point."""
         return self.liquid_enthalpy_tp
 
-    def get_vapour_enthalpy_tp(self):
+    def get_vapour_enthalpy_tp(self): #constant 
         """The vapour enthalpy [kJ/kg] of the chosen gas species at its triple point."""
         return self.vapour_enthalpy_tp
+    
+    def get_mean_enthalpy_at_tp(self):
+        """Calculate the mean enthalpy at the triple point of the gas."""
+        mean_enthalpy = 0.5 * (self.get_liquid_enthalpy_tp() + self.get_vapour_enthalpy_tp())
+        return mean_enthalpy
 
     def get_gas_id(self):
         """The individual gas ID number, found in http://webbook.nist.gov/chemistry/fluid/"""
@@ -103,11 +112,13 @@ class Gas:
         return url_nist
 
     def download_raw_nist_data(self):
-        """Download the raw gas table data from the NIST database."""
-        with urlopen(self.get_nist_data_url()) as source_url:
+        """Download the raw gas table data from the NIST database.""" #problem with the url fixed
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        request = Request(self.get_nist_data_url(), headers=headers)
+        with urlopen(request) as source_url:
             raw_nist_data = source_url.read()
         return raw_nist_data
-
+    
     def save_file(self):
         """Save the file to the defined location (self.local_directory)."""
         if os.path.isfile(self.local_directory + self.get_file_name()):
@@ -134,89 +145,465 @@ class Gas:
         else:
             raw_nist_data = self.download_raw_nist_data()
             self.save_gas_data()
+        #print(raw_nist_data) #ok
         return raw_nist_data
+    
+    def get_dataframe_data(self): #added
 
-    def get_table_nist_data(self):
-        """Transform the raw NIST data into a readable format."""
-        table_nist_data = genfromtxt(BytesIO(self.get_raw_nist_data()), skip_header=1, delimiter='\t', names=None,
-            dtype=None, usecols=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
-            deletechars='', replace_space='')
-        return table_nist_data
+        """ Transforme bytes data in a Pandas Dataframe """
+        brut_data = self.get_raw_nist_data()
+        brut_data = brut_data.decode('utf-8')
+        data_stream = StringIO(brut_data)
+        df = pd.read_csv(data_stream, delimiter="\t", header=None, skiprows=1)
+        return df
+    
+    
+    """ Added a csv file to write down our data ?? 
 
-    def get_column_data(self, column_number):
-        """Get only the data of one particular column of the NIST gas data."""
-        if self.get_table_nist_data().ndim >= 2:
-            column_data = self.get_table_nist_data()[:, column_number]
-        else:
-            column_data = self.get_table_nist_data()[column_number]
+    def get_csv_file(self): 
+    
+    """
+
+    #------- Get Dataframe column -------------------
+    
+    def get_dataframe_column(self, column_number): #added
+        """ Access to one colomn by its number
+
+        Return : Dataframe column 
+        
+        """
+        df = self.get_dataframe_data()
+        column_data = df[column_number]
         return column_data
+    
+    def get_phase_column(self): #added 
+        """ Returns list associated to the phase label"""
+        column = self.get_dataframe_column(13)
+        Phase = column.astype(str).to_list()
+        return Phase 
+    
+    def get_temperature_column(self): #modified
+        """ Returns np.array associated to the temperature"""
+        column = self.get_dataframe_column(0)
+        Temperature = column.astype(float).to_numpy()
+        return Temperature
+    
+    def get_pressure_column(self): #modified
+        """ Returns np.array associated to the pressure"""
+        column = self.get_dataframe_column(1)
+        Pressure = column.astype(float).to_numpy()
+        return Pressure
 
-    def get_column_data_old(self, column_number):
-        """Get only the data of one particular column of the NIST gas data [[deprecated!]]."""
-        return self.get_table_nist_data()[self.get_table_nist_data().dtype.names[column_number]]
+    def get_density_column(self): #modified
+        """ Returns np.array associated to the density"""
+        column = self.get_dataframe_column(2)
+        Density = column.astype(float).to_numpy()
+        return Density
 
-    def get_temperature_column(self):
-        return self.get_column_data(0)
+    def get_enthalpy_column(self): #modified
+        """ Returns np.array associated to the enthalpy"""
+        column = self.get_dataframe_column(5)
+        Enthalpy = column.astype(float).to_numpy()
+        return Enthalpy
 
-    def get_pressure_column(self):
-        return self.get_column_data(1)
+    def get_cv_column(self): #modified
+        """ Returns np.array associated to cv"""
+        column = self.get_dataframe_column(7)
+        cv = column.astype(float).to_numpy()
+        return cv
 
-    def get_density_column(self):
-        return self.get_column_data(2)
+    def get_cp_column(self): #modified
+        """ Returns np.array associated to cp"""
+        column = self.get_dataframe_column(8)
+        cp = column.astype(float).to_numpy()
+        return cp
 
-    def get_enthalpy_column(self):
-        return self.get_column_data(5)
+    
+    # --------- Detect transition --------------
+    
+    def detect_transition(self): #added
 
-    def get_cv_column(self):
-        return self.get_column_data(7)
+        """ Detect transition with label (first approach) and return :
+        - index i-1
+        - initial phase 
+        - temperature at the start of the transition
+        - pressure at the start of the transition
+        """
 
-    def get_cp_column(self):
-        return self.get_column_data(8)
+        phase = self.get_phase_column()
+        transition = []
 
-    def get_simple_supersonic_velocity_value(self):
-        """Calculate the supersonic velocity for the given temperature (simple calculation w/o exact kappa-values)."""
-        v = sqrt(((2 * self.kappa) / (self.kappa - 1)) * (K_b / (M_u * self.mass)) * self.temp)
-        return v
+        temperature = self.get_temperature_column()
+        pressure = self.get_pressure_column()
 
-    def get_simple_supersonic_velocity_array(self):
-        """Calculate the supersonic velocity for the given temperature range (simple calculation w/o exact kappa-values)."""
-        v_array = sqrt(
-            ((2 * self.kappa) / (self.kappa - 1)) * (K_b / (M_u * self.mass)) * self.get_temperature_column())
-        return v_array
+        for i in range(1, len(phase)): 
+            if phase[i] != phase[i-1] : 
+                t_start = temperature[i-1]
+                t_end = t_start + 0.15*t_start
+                indices = np.where(temperature >= t_end)[0]
+                index_T2_real = indices[0] if len(indices) > 0 else None
+                transition_entry = [ i-1, phase[i-1], t_start, pressure[i-1], index_T2_real, phase[i], temperature[index_T2_real], pressure[index_T2_real] ]
+                transition.append(transition_entry)
 
-    def get_exact_kappa(self):
-        """Calculate exact kappa value from NIST data."""
-        kappa_exact = self.get_cp_column() / self.get_cv_column()
-        return kappa_exact
+            else : 
+                transition.append(None)
 
-    def get_exact_supersonic_velocity_value(self):
-        """Calculate the supersonic velocity for the given temperature (with exact kappa values)."""
-        self.t_low = self.temp
-        self.t_high = self.temp
-        v = sqrt(((2 * self.get_exact_kappa()) / (self.get_exact_kappa() - 1)) * (K_b / (M_u * self.mass)) * self.temp)
-        return v
+        return transition
+    
+    #-------- Data selection  : Liquid, Supercritical, Gas according to phase labels -----------
 
-    def get_exact_supersonic_velocity_array(self):
-        """Calculate the supersonic velocity for the given temperature range (with exact kappa values)."""
-        v_array = sqrt(((2 * self.get_exact_kappa()) / (self.get_exact_kappa() - 1)) * (
-            K_b / (M_u * self.mass)) * self.get_temperature_column())
-        return v_array
+    """ Security function ?? """
+    
+    def get_liquid_array(self) : 
 
-    def get_mean_enthalpy_at_tp(self):
-        """Calculate the mean enthalpy at the triple point of the gas."""
-        mean_enthalpy = 0.5 * (self.get_liquid_enthalpy_tp() + self.get_vapour_enthalpy_tp())
-        return mean_enthalpy
+        " Extract liq array according to the label 'liq' until the transition occurs if its the case. Otherwise, get the whole array"
 
-    def get_supercritical_velocity_array(self):
-        """Calculate the supercritical velocity for the given temperature or pressure range."""
-        v_array_calculation = csqrt(2 * 1000 * (self.get_enthalpy_column() - self.get_mean_enthalpy_at_tp()))
+        temperature = self.get_temperature_column()
+        pressure = self.get_pressure_column()
+        density = self.get_density_column()
+        enthalpy = self.get_enthalpy_column()
+        phase = self.get_phase_column()
+        detect_transition = self.detect_transition()
+        transitions = [t for t in detect_transition if t is not None]
+
+        if len(transitions) > 0 : 
+            #First transition
+            transition = transitions[0]
+            index_start, phase_start, temp_start, press_start, index_end, phase_end, temp_end, press_end = transition
+
+            if phase_start == 'liquid' : 
+                temp_liq_array = temperature[:index_start] #until the transition occurs
+                press_liq_array = pressure[:index_start]
+                density_liq_array = density[:index_start]
+                enthalpy_liq_array = enthalpy[:index_start]
+
+
+            return transition, temp_liq_array, press_liq_array, density_liq_array, enthalpy_liq_array
+        
+        else : 
+            
+            phase = np.array(self.get_phase_column(), dtype=str)
+            mask_liquid = phase == 'liquid'
+            temp_liq_array = temperature[mask_liquid] #take the whole array indicated by 'liquid' label in phase column 
+            press_liq_array = pressure[mask_liquid]
+            density_liq_array = density[mask_liquid]
+            enthalpy_liq_array = enthalpy[mask_liquid]
+
+            return temp_liq_array, press_liq_array, density_liq_array, enthalpy_liq_array
+        
+    def get_supercritical_array(self) : 
+
+        " Extract sc array according to the label 'liq' until the transition occurs if its the case. Otherwise, get the whole array"
+
+        temperature = self.get_temperature_column()
+        pressure = self.get_pressure_column()
+        density = self.get_density_column()
+        enthalpy = self.get_enthalpy_column()
+        phase = self.get_phase_column()
+        detect_transition = self.detect_transition()
+        transitions = [t for t in detect_transition if t is not None]
+        
+        if len(transitions) > 0 : 
+
+            #First transition
+            transition = transitions[0]
+            index_start, phase_start, temp_start, press_start, index_end, phase_end, temp_end, press_end = transition
+
+            if phase_start == 'supercritical' : 
+                temp_sc_array = temperature[:index_start] #until the transition occurs
+                press_sc_array = pressure[:index_start]
+                density_sc_array = density[:index_start]
+                enthalpy_sc_array = enthalpy[:index_start]
+
+                return transition, temp_sc_array, press_sc_array, density_sc_array, enthalpy_sc_array
+        
+        else : 
+
+            phase = np.array(self.get_phase_column(), dtype=str)
+            mask_sc = phase == 'supercritical'
+            temp_sc_array = temperature[mask_sc] #take the whole array indicated by 'liquid' label in phase column 
+            press_sc_array = pressure[mask_sc]
+            density_sc_array = density[mask_sc]
+            enthalpy_sc_array = enthalpy[mask_sc]
+
+            return temp_sc_array, press_sc_array, density_sc_array, enthalpy_sc_array
+        
+    def get_gas_array(self) : 
+
+        " Extract sc array according to the label 'liq' until the transition occurs if its the case. Otherwise, get the whole array"
+
+        temperature = self.get_temperature_column()
+        pressure = self.get_pressure_column()
+        density = self.get_density_column()
+        enthalpy = self.get_enthalpy_column()
+        phase = self.get_phase_column()
+        detect_transition = self.detect_transition()
+        transitions = [t for t in detect_transition if t is not None]
+        
+        if len(transitions) > 0 : 
+
+            #First transition
+            transition = transitions[0]
+            index_start, phase_start, temp_start, press_start, index_end, phase_end, temp_end, press_end = transition
+
+            if phase_start == 'vapor' : 
+                temp_gas_array = temperature[:index_start] #until the transition occurs
+                press_gas_array = pressure[:index_start]
+                density_gas_array = density[:index_start]
+                enthalpy_gas_array = enthalpy[:index_start]
+
+                return transition, temp_gas_array, press_gas_array, density_gas_array, enthalpy_gas_array
+        
+        else : 
+
+            phase = np.array(self.get_phase_column(), dtype=str)
+            mask_gas = phase == 'vapor'
+            temp_gas_array = temperature[mask_gas] #take the whole array indicated by 'liquid' label in phase column 
+            press_gas_array = pressure[mask_gas]
+            density_gas_array = density[mask_gas]
+            enthalpy_gas_array = enthalpy[mask_gas]
+
+            return temp_gas_array, press_gas_array, density_gas_array, enthalpy_gas_array
+        
+        
+    #------- Formula to calculate velocity : Update, according to the array entry not for the whole temperature array ------------
+
+    def get_liq_velocity_array(self, press_liq_array, density_liq_array) : 
+        """ Calculate liquid velocity using Bernoulli formulat for a given array of pressure and density"""
+        v_liq_array = sqrt((2 * 1e5 * press_liq_array) / density_liq_array)
+        return v_liq_array
+        
+    def get_gas_velocity_array(self, temp_gas_array) : 
+        v_gas_array = sqrt(
+            ((2 * self.kappa) / (self.kappa - 1)) * (K_b / (M_u * self.mass)) * temp_gas_array)
+        return v_gas_array
+    
+    def get_sc_velocity_array(self, enthalpy_sc_array) : 
+        v_array_calculation = csqrt(2 * 1000 * (enthalpy_sc_array - self.get_mean_enthalpy_at_tp()))
         v_array = np.where(np.iscomplex(v_array_calculation), 0, v_array_calculation).astype(float)
         return v_array
+    
+    # ----------- Transitions --------------
 
-    def get_liquid_velocity_array(self):
-        """Calculate the velocity of an expanding liquid with the Bernoulli formula."""
-        v_array = sqrt((2 * 1e5 * self.get_pressure_column()) / self.get_density_column())
-        return v_array
+    def velocity(self): 
+        liq_array = self.get_liquid_array()
+        sc_array = self.get_supercritical_array()
+        gas_array = self.get_gas_array()
+        temperature = self.get_temperature_column()
+        pressure = self.get_pressure_column()
+        enthalpy = self.get_enthalpy_column()
+        density = self.get_density_column()
+
+        if liq_array is not None and len(liq_array) == 4 : #no transition
+            temp_liq_array, press_liq_array, density_liq_array, enthalpy_liq_array = liq_array
+            v_liq = self.get_liq_velocity_array(press_liq_array,density_liq_array)
+            str_phase = 'liquid'
+            return temp_liq_array, v_liq, str_phase
+        
+        elif sc_array is not None and len(sc_array) == 4 : 
+            temp_sc_array, press_sc_array, density_sc_array, enthalpy_sc_array = sc_array
+            v_sc = self.get_sc_velocity_array(enthalpy_sc_array)
+            str_phase = 'supercritical'
+            return temp_sc_array, v_sc, str_phase
+        
+        elif gas_array is not None and len(gas_array) == 4 : 
+            temp_gas_array, press_gas_array, density_gas_array, enthalpy_gas_array = gas_array
+            v_gas = self.get_gas_velocity_array(temp_gas_array)
+            str_phase = 'gas'
+            return temp_gas_array, v_gas, str_phase
+
+        elif len(liq_array) == 5 : #if liq transition
+            transition, temp_liq_array, press_liq_array, density_liq_array, enthalpy_liq_array = liq_array
+            index_start, phase_start, temp_start, press_start, index_end, phase_end, temp_end, press_end = transition
+
+            # --- Before transition -----
+            v_liq_before = self.get_liq_velocity_array(press_liq_array,density_liq_array)
+            
+            #-- After transition ---
+            if phase_end == 'vapor': 
+                temp_liq_after_array = temperature[index_end:]
+                v_liq_after = self.get_gas_velocity_array(temp_liq_after_array)
+
+            elif phase_end == 'supercritical': 
+                enthalpy_liq_after_array = enthalpy[index_end:]
+                temp_liq_after_array = temperature[index_end:]
+                v_liq_after = self.get_sc_velocity_array(enthalpy_liq_after_array) 
+
+            #--- During transition ----
+
+            T1 = temp_start
+            T2 = temperature[index_end]
+
+            v1 = v_liq_before[-1]
+            v2 = v_liq_after[0]
+
+            x = np.array([T1, T2])
+            y = np.array([v1, v2])
+            """
+            # Créer des points x plus denses pour lisser la courbe
+            x_smooth = np.linspace(T1, T2, 100)
+
+            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
+            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
+
+            # Interpolation lissée
+            y_smooth = spline(x_smooth)
+
+            # Créer des points x plus denses pour lisser la courbe
+            x_smooth = np.linspace(temp_start, temp_end, 100)
+
+            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
+            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
+
+            # Interpolation lissée
+            y_smooth = spline(x_smooth)
+            """
+           
+            return temp_start, phase_start, phase_end, temp_liq_array, v_liq_before, temp_liq_after_array, v_liq_after, x, y
+
+
+        elif len(gas_array) == 5 : #if gas transition
+            transition, temp_gas_array, press_gas_array, density_gas_array, enthalpy_gas_array = gas_array
+            index_start, phase_start, temp_start, press_start, index_end, phase_end, temp_end, press_end = transition
+
+            # --- Before transition -----
+            v_gas_before = self.get_liq_velocity_array(temp_gas_array)
+            
+            #-- After transition ---
+            if phase_end == 'liquid': 
+                pressure_gas_after = pressure[index_end:]
+                density_gas_after = density[index_end:]
+                temp_gas_after_array = temperature[index_end:]
+                v_gas_after = self.get_liq_velocity_array(pressure_gas_after, density_gas_after)
+
+            elif phase_end == 'supercritical': 
+                enthalpy_liq_after_array = enthalpy[index_end:]
+                temp_gas_after_array = temperature[index_end:]
+                v_liq_after = self.get_sc_velocity_array(enthalpy_liq_after_array) 
+
+            #--- During transition ----
+
+            T1 = temp_start
+            T2 = temperature[index_end]
+
+            v1 = v_liq_before[-1]
+            v2 = v_liq_after[0]
+
+            x = np.array([T1, T2])
+            y = np.array([v1, v2])
+
+            """
+            # Créer des points x plus denses pour lisser la courbe
+            x_smooth = np.linspace(T1, T2, 100)
+
+            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
+            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
+
+            # Interpolation lissée
+            y_smooth = spline(x_smooth)
+
+            # Créer des points x plus denses pour lisser la courbe
+            x_smooth = np.linspace(temp_start, temp_end, 100)
+
+            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
+            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
+
+            # Interpolation lissée
+            y_smooth = spline(x_smooth)
+            """
+           
+            return temp_start, phase_start, phase_end, temp_gas_array, v_gas_before, temp_gas_after_array, v_gas_after, x, y
+        
+        elif len(sc_array) == 5 : #if gas transition
+            transition, temp_sc_array, press_sc_array, density_sc_array, enthalpy_sc_array = sc_array
+            index_start, phase_start, temp_start, press_start, index_end, phase_end, temp_end, press_end = transition
+
+            # --- Before transition -----
+            v_sc_before = self.get_sc_velocity_array(enthalpy_sc_array)
+            
+            #-- After transition ---
+            if phase_end == 'liquid': 
+                pressure_sc_after = pressure[index_end:]
+                density_sc_after = density[index_end:]
+                temp_sc_after_array = temperature[index_end:]
+                v_sc_after = self.get_liq_velocity_array(pressure_sc_after, density_sc_after)
+
+            elif phase_end == 'vapor': 
+                temp_sc_after_array = temperature[index_end:]
+                v_sc_after = self.get_gas_velocity_array(temp_sc_after_array) 
+
+            #--- During transition ----
+
+            T1 = temp_start
+            T2 = temperature[index_end]
+
+            v1 = v_liq_before[-1]
+            v2 = v_liq_after[0]
+
+            x = np.array([T1, T2])
+            y = np.array([v1, v2])
+
+            """
+            # Créer des points x plus denses pour lisser la courbe
+            x_smooth = np.linspace(T1, T2, 100)
+
+            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
+            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
+
+            # Interpolation lissée
+            y_smooth = spline(x_smooth)
+
+            # Créer des points x plus denses pour lisser la courbe
+            x_smooth = np.linspace(temp_start, temp_end, 100)
+
+            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
+            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
+
+            # Interpolation lissée
+            y_smooth = spline(x_smooth)
+            """
+           
+            return temp_start, phase_start, phase_end, temp_sc_array, v_sc_before, temp_sc_after_array, v_sc_after, x, y
+        
+    def fit_function(self): 
+
+        result = self.velocity()
+        if len(result) == 3 :
+            x, y, phase = result
+            
+            coeff = np.polyfit(x, y, 3)
+            data_polynomial = np.poly1d(coeff)
+
+            return data_polynomial
+        
+        else : 
+            temp_start, phase_start, phase_end, temp_before_array, v_before, temp_after_array, v_after, x, y = result
+
+            x_before = temp_before_array
+            y_before = v_before
+            coeff_before = np.polyfit(x_before, y_before, 3)
+            data_before_polynomial = np.poly1d(coeff_before)
+
+            x_during = x 
+            y_during = y 
+            m = (y_during[1] - y_during[0]) / (x_during[1] - x_during[0])
+            b =  y_during[0] - m * x_during[0]
+
+            x_after = temp_after_array
+            y_after = v_after
+            coeff_after = np.polyfit(x_after, y_after, 3)
+            data_after_polynomial = np.poly1d(coeff_after)
+
+            return data_before_polynomial, m,b, data_after_polynomial
+
+            """
+            plt.plot(temp_before_array,v_before, label = phase_start)
+            plt.plot(temp_after_array, v_after, label = phase_end )
+            plt.plot(x,y, "r--" )
+            plt.axvline(x=temp_start, linestyle='--', color='black')
+            plt.legend()
+            plt.show()
+            """
 
 
 class N2(Gas):
@@ -430,27 +817,3 @@ class Test2(Ubertest):
         super().__init__()
         self.long_name = 'Hydrogen'
         self.kappa = 66
-
-
-def get_k(x):
-    return x.kappa
-
-
-def main():
-    a = H2(iso_type='IsoBar', temp=33, t_low=20, t_high=40, press=40)
-    b = a.get_liquid_velocity_array()
-    c = a.get_exact_supersonic_velocity_array()
-    d = a.get_supercritical_velocity_array()
-    e = a.get_simple_supersonic_velocity_array()
-    T = a.get_temperature_column()
-    plt.plot(T, b, 'b')
-    plt.plot(T, c, 'y')
-    plt.plot(T, d, 'r')
-    plt.plot(T, e, 'g')
-    plt.show()
-
-# ------------------------
-
-if __name__ == "__main__":
-    main()
-
