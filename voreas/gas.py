@@ -439,25 +439,6 @@ class Gas:
 
             x = np.array([T1, T2])
             y = np.array([v1, v2])
-            """
-            # Créer des points x plus denses pour lisser la courbe
-            x_smooth = np.linspace(T1, T2, 100)
-
-            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
-            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
-
-            # Interpolation lissée
-            y_smooth = spline(x_smooth)
-
-            # Créer des points x plus denses pour lisser la courbe
-            x_smooth = np.linspace(temp_start, temp_end, 100)
-
-            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
-            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
-
-            # Interpolation lissée
-            y_smooth = spline(x_smooth)
-            """
            
             return temp_start, phase_start, phase_end, temp_liq_array, v_liq_before, temp_liq_after_array, v_liq_after, x, y
 
@@ -491,26 +472,6 @@ class Gas:
 
             x = np.array([T1, T2])
             y = np.array([v1, v2])
-
-            """
-            # Créer des points x plus denses pour lisser la courbe
-            x_smooth = np.linspace(T1, T2, 100)
-
-            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
-            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
-
-            # Interpolation lissée
-            y_smooth = spline(x_smooth)
-
-            # Créer des points x plus denses pour lisser la courbe
-            x_smooth = np.linspace(temp_start, temp_end, 100)
-
-            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
-            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
-
-            # Interpolation lissée
-            y_smooth = spline(x_smooth)
-            """
            
             return temp_start, phase_start, phase_end, temp_gas_array, v_gas_before, temp_gas_after_array, v_gas_after, x, y
         
@@ -542,26 +503,6 @@ class Gas:
 
             x = np.array([T1, T2])
             y = np.array([v1, v2])
-
-            """
-            # Créer des points x plus denses pour lisser la courbe
-            x_smooth = np.linspace(T1, T2, 100)
-
-            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
-            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
-
-            # Interpolation lissée
-            y_smooth = spline(x_smooth)
-
-            # Créer des points x plus denses pour lisser la courbe
-            x_smooth = np.linspace(temp_start, temp_end, 100)
-
-            # Créer la spline (ordre 1 ici car seulement 2 points, ordre 3 pas possible)
-            spline = make_interp_spline(x, y, k=1)  # k=1 = linéaire ; tu peux mettre k=2 si tu ajoutes un 3e point
-
-            # Interpolation lissée
-            y_smooth = spline(x_smooth)
-            """
            
             return temp_start, phase_start, phase_end, temp_sc_array, v_sc_before, temp_sc_after_array, v_sc_after, x, y
         
@@ -595,16 +536,6 @@ class Gas:
             data_after_polynomial = np.poly1d(coeff_after)
 
             return data_before_polynomial, m,b, data_after_polynomial
-
-            """
-            plt.plot(temp_before_array,v_before, label = phase_start)
-            plt.plot(temp_after_array, v_after, label = phase_end )
-            plt.plot(x,y, "r--" )
-            plt.axvline(x=temp_start, linestyle='--', color='black')
-            plt.legend()
-            plt.show()
-            """
-
 
 class N2(Gas):
     def __init__(self, **kwargs):
