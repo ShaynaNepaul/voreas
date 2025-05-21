@@ -1,9 +1,7 @@
 from gas import *  
-from scipy.optimize import curve_fit
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import make_smoothing_spline
-from scipy.interpolate import UnivariateSpline
+
 # Needed constants
 # Unit mass of the gas species [kg]
 M_u = 1.660538e-27
@@ -21,23 +19,30 @@ gaz_classes = {
     "N2": N2
 }
 
-data = [
-    {"name": "H2", "corr": 2.4, "speed": 1050},
-    {"name": "N2", "corr": 1, "speed": 1100},
-    {"name": "He", "corr": 5.9, "speed": 1320},
-    {"name": "Ne", "corr": 3.33, "speed": 1200},
-    {"name": "Ar", "corr": 0.78, "speed": 1000},
-    {"name": "Kr", "corr": 0.5, "speed": 880},
-    {"name": "Xe", "corr": 0.85, "speed": 880}
+data = [ #values not found for Ne, Kr, Xe
+    {"name": "H2", "corr": 2.4, "S1_S2": 555, "S3_S4" : 220 },
+    {"name": "N2", "corr": 1, "S1_S2": 685, "S3_S4" : 260},
+    {"name": "He", "corr": 5.9, "S1_S2": 655, "S3_S4" : 255},
+    {"name": "Ne", "corr": 3.33, "S1_S2": 600, "S3_S4" : 200 },
+    {"name": "Ar", "corr": 0.78, "S1_S2": 665, "S3_S4" : 255},
+    {"name": "Kr", "corr": 0.5, "S1_S2": 600, "S3_S4" : 200},
+    {"name": "Xe", "corr": 0.85, "S1_S2": 600, "S3_S4" : 200}
 ]
 
-def print_velocity_density(name, T, p, dx=0.1, S=2): #fixed pressure
+def print_velocity_density(name, T, p, S1, S2, S3, S4): #fixed pressure, fixed temperature
+
+    """ Calculate the velocity and the density
+    
+    S1, S2, S3, S4 : correspond to the pressure at the differential pumping stages 
+    Z1, Z2, Z3, Z4 : correspond to pumping speed of each pump 
+
+    """
 
     gas_class = gaz_classes[name]
     a = gas_class(iso_type='IsoBar', temp=T, press=p) 
     velocity = a.get_velocity(T, p)
     result = a.velocity()
-
+    """
     # ----Visualize curves------
     
     if len(result) == 3:
@@ -62,34 +67,43 @@ def print_velocity_density(name, T, p, dx=0.1, S=2): #fixed pressure
         plt.ylabel("Velocity [m/s]")
         plt.legend()
         plt.show()
-
+        """
     corr = None
+    Z1 = None 
+    Z2 = None 
+    Z3 = None 
+    Z4 = None
     for d in data:
         if d["name"] == name:
             corr = d["corr"]
+            Z1 = d["S1_S2"]
+            Z2 = d["S1_S2"]
+            Z3 = d["S3_S4"]
+            Z4 = d["S3_S4"]
 
-    p1, p2, p3, p4 = 1e-7, 1e-9, 1e-10, 1e-10 #fixed values
-    delta_p = p1 + p2 + p3 + p4
-    factor = 4 / (np.pi * K_b * T * dx * velocity)
-    corrected_density = factor * corr * S * delta_p
+    dx = 0.1 #constant
+    factor = corr * 4 / (np.pi * K_b * T * dx * velocity)
+    sum = Z1 * S1 + Z2 * S2 + Z3 * S3 + Z4 * S4
+    density = factor * sum
 
-    return {"velocity": velocity, "density": corrected_density} 
+    return {"velocity": velocity, "density": density} 
 
-def get_velocity_value(name, T, p, dx=0.1, S=2): 
-    data = print_velocity_density(name, T,p)
+def get_velocity_value(name, T, p, S1, S2, S3, S4): 
+    data = print_velocity_density(name, T,p, S1, S2, S3, S4)
     v = data["velocity"]
     return v 
 
-def get_density_value(name, T, p, dx=0.1, S=2): 
-    data = print_velocity_density(name, T, p)
+def get_density_value(name, T, p, S1, S2, S3, S4): 
+    data = print_velocity_density(name, T, p, S1, S2, S3, S4)
     d = data["density"]
     return d 
 
-def main():
+def main(): #test
     T = 40 # temperature
-    print(print_velocity_density(name="Ne", T=T, p = 10))
-    print(get_velocity_value(name = "Ne", T = T, p = 10))
-    print(get_density_value(name = "Ne", T = T, p = 10))
+    p = 10 
+    #print(print_velocity_density(name="H2", T=T, p = 10, S1 = 2, S2 = 2, S3 = 5, S4 = 4 ))
+    print(get_velocity_value(name = "H2", T = T, p = 10, S1 = 2, S2 = 2, S3 = 5, S4 = 4))
+    print(get_density_value(name = "H2", T = T, p = 10, S1 = 2, S2 = 2, S3 = 5, S4 = 4))
 
 if __name__ == "__main__":
     main()
