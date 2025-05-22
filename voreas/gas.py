@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+
 
 # Needed libraries
 from __future__ import division
@@ -380,9 +380,7 @@ class Gas:
                 x = np.array([T1, T2])
                 y = np.array([v1, v2])
 
-                return temp_start, phase_start, phase_end, temp_before, v_before, temp_after, v_after, x, y
-
-                    
+                return temp_start, phase_start, phase_end, temp_before, v_before, temp_after, v_after, x, y               
 
     def fit_function(self): 
 
@@ -436,7 +434,6 @@ class Gas:
     def get_velocity(self, t, p): 
 
         """ Calculate the velocity for any temperature based on the fit. 
-
         This method retrieves temperature and velocity data using 'fit function()' 
 
         Return float : value of the velocity for a given temperature and pressure
