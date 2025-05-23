@@ -29,45 +29,15 @@ data = [ #values not found for Ne, Kr, Xe
     {"name": "Xe", "corr": 0.85, "S1_S2": 600, "S3_S4" : 200}
 ]
 
-def print_velocity_density(name, T, p, S1, S2, S3, S4): #fixed pressure, fixed temperature
-
-    """ Calculate the velocity and the density
-    
-    S1, S2, S3, S4 : correspond to the pressure at the differential pumping stages 
-    Z1, Z2, Z3, Z4 : correspond to pumping speed of each pump 
-
-    """
+def get_velocity_value(name, T, p, S1, S2, S3, S4): 
 
     gas_class = gaz_classes[name]
     a = gas_class(iso_type='IsoBar', temp=T, press=p) 
     velocity = a.get_velocity(T, p)
-    result = a.velocity()
-    """
-    # ----Visualize curves------
-    
-    if len(result) == 3:
-        x, y, phase = result
-        plt.plot(x, y, label=phase)
-        plt.title(f"{name}: Velocity vs Temperature at {p} bar")
-        plt.xlabel("Temperature [K]")
-        plt.ylabel("Velocity [m/s]")
-        plt.legend()
-        plt.show()
-    else:
-        (temp_start, phase_start, phase_end,
-         temp_before_array, v_before,
-         temp_after_array, v_after, x, y) = result
+    return velocity
 
-        plt.plot(temp_before_array, v_before, label=phase_start)
-        plt.plot(temp_after_array, v_after, label=phase_end)
-        plt.plot(x, y, "r--", label="Interpolation")
-        plt.axvline(x=temp_start, linestyle='--', color='black', label="Transition")
-        plt.title(f"{name}: Velocity vs Temperature at {p} bar")
-        plt.xlabel("Temperature [K]")
-        plt.ylabel("Velocity [m/s]")
-        plt.legend()
-        plt.show()
-        """
+def get_density_value(name, T, p, S1, S2, S3, S4): 
+    velocity = get_velocity_value(name, T, p, S1, S2, S3, S4)
     corr = None
     Z1 = None 
     Z2 = None 
@@ -80,30 +50,15 @@ def print_velocity_density(name, T, p, S1, S2, S3, S4): #fixed pressure, fixed t
             Z2 = d["S1_S2"]
             Z3 = d["S3_S4"]
             Z4 = d["S3_S4"]
-
-    dx = 0.1 #constant
+    dx = 0.1 
     factor = corr * 4 / (np.pi * K_b * T * dx * velocity)
     sum = Z1 * S1 + Z2 * S2 + Z3 * S3 + Z4 * S4
     density = factor * sum
-
-    return {"velocity": velocity, "density": density} 
-
-def get_velocity_value(name, T, p, S1, S2, S3, S4): 
-    data = print_velocity_density(name, T,p, S1, S2, S3, S4)
-    v = data["velocity"]
-    return v 
-
-def get_density_value(name, T, p, S1, S2, S3, S4): 
-    data = print_velocity_density(name, T, p, S1, S2, S3, S4)
-    d = data["density"]
-    return d 
+    return density
 
 def main(): #test
-    T = 40 # temperature
-    p = 10 
-    #print(print_velocity_density(name="H2", T=T, p = 10, S1 = 2, S2 = 2, S3 = 5, S4 = 4 ))
-    print(get_velocity_value(name = "H2", T = T, p = 10, S1 = 2, S2 = 2, S3 = 5, S4 = 4))
-    print(get_density_value(name = "H2", T = T, p = 10, S1 = 2, S2 = 2, S3 = 5, S4 = 4))
+    print(get_velocity_value(name = "H2", T = 40, p = 10, S1 = 2, S2 = 2, S3 = 5, S4 = 4))
+    print(get_density_value(name = "H2", T = 40, p = 10, S1 = 2, S2 = 2, S3 = 5, S4 = 4))
 
 if __name__ == "__main__":
     main()
