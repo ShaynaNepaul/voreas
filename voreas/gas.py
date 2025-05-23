@@ -416,7 +416,7 @@ class Gas:
 
             x_before = temp_before_array
             y_before = v_before
-            coeff_before = np.polyfit(x_before, y_before, 3)
+            coeff_before = np.polyfit(x_before, y_before, 20)
             data_before_polynomial = np.poly1d(coeff_before)
 
             x_during = x 
@@ -426,7 +426,7 @@ class Gas:
 
             x_after = temp_after_array
             y_after = v_after
-            coeff_after = np.polyfit(x_after, y_after, 3)
+            coeff_after = np.polyfit(x_after, y_after, 20)
             data_after_polynomial = np.poly1d(coeff_after)
 
             return data_before_polynomial, m,b, data_after_polynomial
