@@ -50,15 +50,14 @@ def get_density_value(name, T, p, S1, S2, S3, S4):
             Z2 = d["S1_S2"]
             Z3 = d["S3_S4"]
             Z4 = d["S3_S4"]
-    dx = 0.1 
+    dx = 2 * 1e-3 # In meter
     factor = corr * 4 / (np.pi * K_b * T * dx * velocity)
-    sum = Z1 * S1 + Z2 * S2 + Z3 * S3 + Z4 * S4
+    sum = (Z1* 1e-3) *(S1*1e2) + (Z2* 1e-3) *(S2*1e2) + (Z3* 1e-3) *(S3*1e2) + (Z4* 1e-3) *(S4*1e2)
     density = factor * sum
-    return density
+    return density / 10000 #in /cm2
 
 def main(): #test
-    print(get_velocity_value(name = "H2", T = 40, p = 10, S1 = 2, S2 = 2, S3 = 5, S4 = 4))
-    print(get_density_value(name = "H2", T = 40, p = 10, S1 = 2, S2 = 2, S3 = 5, S4 = 4))
+    print(f"{get_density_value(name='H2', T=35, p=6, S1=1.37e-7, S2=4.74e-9, S3=4.91e-9, S4=7.94e-10):.2e}")
 
 if __name__ == "__main__":
     main()
