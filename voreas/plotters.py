@@ -69,7 +69,7 @@ def plot_velocity(name, T, p, S1, S2, S3, S4): #fixed pressure, fixed temperatur
         plt.show()
 
 def main(): #test
-    print(plot_velocity(name = "H2", T = 40, p = 10, S1 = 2, S2 = 2, S3 = 5, S4 = 4))
+    print(plot_velocity(name = "H2", T = 38, p = 6, S1 = 1.37e-7, S2 = 4.74e-9, S3 = 4.91e-9, S4 = 7.94e-10))
 
 if __name__ == "__main__":
     main()

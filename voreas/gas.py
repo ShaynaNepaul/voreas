@@ -158,6 +158,7 @@ class Gas:
         """ Transforme bytes data in a Pandas Dataframe """
         brut_data = self.get_raw_nist_data()
         brut_data = brut_data.decode('utf-8')
+        print(brut_data)
         data_stream = StringIO(brut_data)
         df = pd.read_csv(data_stream, delimiter="\t", header=None, skiprows=1)
         return df
@@ -445,6 +446,12 @@ class Gas:
         if len(fit_equations) == 4 : 
             temp_start, phase_start, phase_end, temp_before_array, v_before, temp_after_array, v_after, x, y = result
             data_before_polynomial, m,b, data_after_polynomial = fit_equations
+            """
+            if t == temp_before_array[-1] or t == x[0] or t == x[1] or t == temp_after_array[0]:
+                print(f"Edge temperature: {t}")
+                print(f"temp_before_array[-1]: {temp_before_array[-1]}")
+                print(f"x: {x}, temp_after_array[0]: {temp_after_array[0]}")
+            """
             
             if t <= temp_before_array[-1]: 
                 return (data_before_polynomial(t))
@@ -452,6 +459,8 @@ class Gas:
                 return (data_after_polynomial(t))
             elif x[0] <= t <= x[1]: 
                 return m*t + b
+            elif temp_before_array[-1] <= t <= x[0]: 
+                return data_before_polynomial(t)
             else : 
                 print("Error")
         else : 

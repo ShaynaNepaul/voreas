@@ -57,7 +57,13 @@ def get_density_value(name, T, p, S1, S2, S3, S4):
     return density / 10000 #in /cm2
 
 def main(): #test
-    print(f"{get_density_value(name='H2', T=35, p=6, S1=1.37e-7, S2=4.74e-9, S3=4.91e-9, S4=7.94e-10):.2e}")
+    T_range = np.linspace(20, 50, 100)
+    #for t in T_range : 
+        #print("temperature")
+        #print(t)
+        #print(f"{get_density_value(name='H2', T=t, p=6, S1=1.37e-7, S2=4.74e-9, S3=4.91e-9, S4=7.94e-10):.2e}")
+    
+    print(f"{get_density_value(name='H2', T= 38 , p=6, S1=1.37e-7, S2=4.74e-9, S3=4.91e-9, S4=7.94e-10):.2e}")
 
 if __name__ == "__main__":
     main()
