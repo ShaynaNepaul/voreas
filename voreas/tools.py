@@ -57,7 +57,7 @@ def get_density_value(name, T, p, S1, S2, S3, S4):
     return density / 10000 #in /cm2
 
 def main(): #test
-    T_range = np.linspace(20, 50, 100)
+    T_rnge = np.linspace(20, 50, 100)
     #for t in T_range : 
         #print("temperature")
         #print(t)
